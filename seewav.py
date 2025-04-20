@@ -318,6 +318,22 @@ def parse_color(colorstr: str) -> tuple[float, float, float]:
         raise
 
 
+def parse_size_token(token: str) -> tuple[int, int]:
+    """Parse a *WxH* string used by the ``--size`` CLI option.
+    
+    Returns a ``(width, height)`` tuple.
+    """
+    try:
+        w_str, h_str = token.lower().split("x")
+        width, height = int(w_str), int(h_str)
+        if width <= 0 or height <= 0:
+            raise ValueError
+        return width, height
+    except Exception as exc:  # noqa: BLE001
+        fatal("--size must be in the form <width>x<height>, e.g. 640x360")
+        raise ValueError("Invalid --size parameter") from exc
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         "seewav", description="Generate a nice mp4 animation from an audio file."
@@ -370,14 +386,25 @@ def main() -> None:
         help="Higher values means faster transitions between frames.",
     )
     parser.add_argument(
-        "-W", "--width", type=int, default=480, help="width in pixels of the animation"
+        "-W",
+        "--width",
+        type=int,
+        default=480,
+        help="Width of the animation in pixels.",
     )
     parser.add_argument(
         "-H",
         "--height",
         type=int,
         default=300,
-        help="height in pixels of the animation",
+        help="Height of the animation in pixels.",
+    )
+
+    parser.add_argument(
+        "--size",
+        metavar="WxH",
+        default=None,
+        help="Output video dimension (e.g. 640x360). Overrides --width/--height when provided.",
     )
     parser.add_argument(
         "-s", "--seek", type=float, help="Seek to time in seconds in video."
@@ -409,7 +436,9 @@ def main() -> None:
             fg_color=args.color,
             fg_color2=args.color2,
             bg_color=[1.0 * bool(args.white)] * 3,
-            size=(args.width, args.height),
+            size=parse_size_token(args.size)
+            if args.size
+            else (args.width, args.height),
             stereo=args.stereo,
         )
 
